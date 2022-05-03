@@ -1,0 +1,4 @@
+Pendulum center from origo: 
+X = -0.000124 m , should be 0
+Y = -0.072269 m
+Z = 0.91609 m
