@@ -15,6 +15,18 @@ public:
 	// Sets default values for this actor's properties
 	AInvertedPendulum();
 
+	UPROPERTY(VisibleAnyWhere, BlueprintReadOnly, Category = "CartPole")
+	UStaticMeshComponent* BaseStaticMesh;
+
+	UPROPERTY(VisibleAnyWhere, BlueprintReadOnly, Category = "CartPole")
+	UStaticMeshComponent* PoleStaticMesh;
+
+	UPROPERTY(VisibleAnyWhere, BlueprintReadOnly, Category = "CartPole")
+	UStaticMeshComponent* CartStaticMesh;
+
+	UPROPERTY(VisibleAnyWhere, BlueprintReadOnly, Category = "CartPole")
+	USceneComponent* RevoluteJoint;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
