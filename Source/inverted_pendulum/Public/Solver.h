@@ -26,6 +26,7 @@ protected:
 	FCriticalSection UE4_Mutex;
 	FRunnableThread* Thread = nullptr;
 
+private:
 	UWorld* WorldPtr;
 	bool bStopThread;
 	float CartPosition;

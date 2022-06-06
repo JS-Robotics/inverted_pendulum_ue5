@@ -39,28 +39,35 @@ void AInvertedPendulum::BeginPlay()
 	Super::BeginPlay();
 
 	SolverThread = new FSolver(GetWorld());
-	
+
 	CartStaticMesh->SetRelativeLocation({0.0f, 7.2269f, 91.609f}); // Reset back position on begin play
-	PoleStaticMesh->SetRelativeLocation({0.0f, 0.0f, 0.0f}); // Reset back position on begin play
+	RevoluteJoint->SetRelativeLocation({0.0f, 0.0f, 0.0f}); // Reset back position on begin play
 }
 
 // Called every frame
 void AInvertedPendulum::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	float XPos;
-	float ThetaPos;
-	SolverThread->GetPose(XPos, ThetaPos);
+	float XPos = 0;
+	float ThetaPos = 0;
 
-	CartStaticMesh->SetRelativeLocation({XPos, 7.2269f, 91.609f}); // Reset back position on begin play
-	PoleStaticMesh->SetRelativeRotation({ThetaPos, 0.0f, 0.0f}); // Reset back position on begin play
-	
+	if (SolverThread)
+	{
+		SolverThread->GetPose(XPos, ThetaPos);
+	}
+
+	FVector PosUpdate = {XPos, 7.2269f, 91.609f}; 
+	FRotator AngleUpdate = {ThetaPos, 0.0f, 0.0f}; 
+	CartStaticMesh->SetRelativeLocation(PosUpdate); // Reset back position on begin play
+	RevoluteJoint->SetRelativeRotation(AngleUpdate); // Reset back position on begin play
 }
 
-void AInvertedPendulum::EndPlay(const EEndPlayReason::Type EndPlayReason){
+void AInvertedPendulum::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
 	Super::EndPlay(EndPlayReason);
 
-	if (SolverThread && SolverThread->IsRunning()) {
+	if (SolverThread && SolverThread->IsRunning())
+	{
 		SolverThread->Stop();
 		while (SolverThread->IsRunning())
 		{
