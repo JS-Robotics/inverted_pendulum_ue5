@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "HAL/Runnable.h"
-
+#include <chrono>
 /**
  * 
  */
@@ -21,6 +21,7 @@ public:
 
 	bool IsRunning() const {return !bStopThread;}
 	void GetPose(float& Position, float& Rotation);
+	double GetElapsedTime();
 
 protected:
 	FCriticalSection UE4_Mutex;
@@ -31,5 +32,6 @@ private:
 	bool bStopThread;
 	float CartPosition;
 	float PoleRotation;
+	double ElapsedTime;
 	
 };

@@ -53,13 +53,15 @@ void AInvertedPendulum::Tick(float DeltaTime)
 
 	if (SolverThread)
 	{
-		SolverThread->GetPose(XPos, ThetaPos);
+		// SolverThread->GetPose(XPos, ThetaPos);
 	}
 
 	FVector PosUpdate = {XPos, 7.2269f, 91.609f}; 
 	FRotator AngleUpdate = {ThetaPos, 0.0f, 0.0f}; 
 	CartStaticMesh->SetRelativeLocation(PosUpdate); // Reset back position on begin play
 	RevoluteJoint->SetRelativeRotation(AngleUpdate); // Reset back position on begin play
+
+	// UE_LOG(LogTemp, Warning, TEXT("Elapsed Simulation time: %f[s]"), SolverThread->GetElapsedTime());
 }
 
 void AInvertedPendulum::EndPlay(const EEndPlayReason::Type EndPlayReason)
