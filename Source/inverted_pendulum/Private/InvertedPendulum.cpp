@@ -74,7 +74,7 @@ void AInvertedPendulum::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		SolverThread->Stop();
 		while (SolverThread->IsRunning())
 		{
-			FPlatformProcess::Sleep(0.1);
+			FPlatformProcess::Sleep(0.0001);
 		}
 		delete SolverThread;
 		UE_LOG(LogTemp, Warning, TEXT("Stopped and deleted _wave_thread"));
