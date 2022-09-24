@@ -15,9 +15,9 @@ public:
 	virtual ~FSolver() override;
 
 	// FRunnable Pure Virtual functions
-	virtual bool Init() override;
-	virtual uint32 Run() override;
-	virtual void Stop() override;
+	virtual bool Init();
+	virtual uint32 Run();
+	virtual void Stop();
 
 	bool IsRunning() const {return !bStopThread;}
 	void GetPose(float& Position, float& Rotation);
@@ -33,5 +33,6 @@ private:
 	float CartPosition;
 	float PoleRotation;
 	double ElapsedTime;
+	float ErrorIntegral;
 	
 };
