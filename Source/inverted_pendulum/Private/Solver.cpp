@@ -3,6 +3,7 @@
 
 #include "Solver.h"
 #include <thread>
+#include <windows/PxWindowsIntrinsics.h>
 
 FSolver::FSolver(UWorld* UWorldPtr): WorldPtr(UWorldPtr)
 {
@@ -42,7 +43,7 @@ uint32 FSolver::Run()
 	float x_d = 0.0f;
 	float x_dd = 0.0f;
 
-	float w = 3.1f;
+	float w = 2.8f;
 	float w_d = 0.0f;
 	float w_dd = 0.0f;
 
@@ -92,25 +93,28 @@ uint32 FSolver::Run()
 
 		if(SwingUp)
 		{
-			if(w > 1.571 || w < 4.712)
-			{
-				e_p = 0.5f*I_p*w_d*w_d + m_p*g*L_p*cos(w);
-				u = (e_t - e_p)*w_d*cos(w)*0.18525;	
-			}
-			else if(e_t == e_p)
-			{
-				u = 0;
-			}
-			else
-			{
-				u = 0;
-			}
-
-			if (w < 0.0 + 0.15 || w > 3.1415 * 2 - 0.15)
-			{
-				SwingUp = false;
-				UseLQR = true;
-			}
+			u = SwingUpControl(w, w_d, x);
+			
+			// if(w > 1.571 || w < 4.712)
+			// {
+			// 	e_p = 0.5f*I_p*w_d*w_d + m_p*g*L_p*cos(w);
+			// 	u = (e_t - e_p)*w_d*cos(w)*0.18525;	
+			// }
+			// else if(e_t == e_p)
+			// {
+			// 	u = 0;
+			// }
+			// else
+			// {
+			// 	u = 0;
+			// }
+			//
+			
+			// if (w < 0.0 + 0.15 || w > 3.1415 * 2 - 0.15)
+			// {
+			// 	SwingUp = false;
+			// 	UseLQR = true;
+			// }
 		}
 		if(UseLQR)
 		{
@@ -158,6 +162,45 @@ uint32 FSolver::Run()
 		ElapsedTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - Timer).count();
 	}
 	return 0;
+}
+
+
+float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position){
+	float m_p = 10.f; //0.071f;
+	float m_c = 10.f; //0.288f;
+	float L_p = 0.6f; //(0.685f - 0.246f);
+	float I_p = 0.05f; //0.006f;
+	float g = 9.81f;
+	float b_p = 1.17;
+	float SetPoint;
+	float e_t = m_p*g*L_p;
+	 //float e_p = 0.5f*(I_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
+	float e_p = 0.5f*(I_p+m_p*L_p*L_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
+	float Direction = -75.0f*physx::intrinsics::sign(ThetaDot)*physx::intrinsics::sign(Theta);
+	
+	if(Theta > PI)
+	{
+		SetPoint = -0.3f;
+	}
+	if(Theta <= PI)
+	{
+		SetPoint = 0.3f;
+		
+	}
+	
+	float Error = SetPoint - Position;
+	//float u = (e_t - e_p)*ThetaDot*cos(Theta)*0.195;
+	float u;
+	if (Theta > PI-0.1 || Theta < PI+0.1)
+	{
+		 u = Error*Direction;	
+	}
+	else
+	{
+		u = 0;
+	}
+		
+	return u;
 }
 
 
