@@ -35,4 +35,5 @@ private:
 	double ElapsedTime;
 	float ErrorIntegral;
 	float SwingUpControl(float Theta, float ThetaDot, float Position);
+	float SignOfFloat(float Value);
 };
