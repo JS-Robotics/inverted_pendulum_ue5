@@ -41,12 +41,12 @@ uint32 FSolver::Run()
 	float x_d = 0.0f;
 	float x_dd = 0.0f;
 
-	float w = 0.35f;//3.1415f;
+	float w = 3.0f; //3.1415f;
 	float w_d = 0.0f;
 	float w_dd = 0.0f;
 
-	float b_c = 1.15f;
-	float b_p = 0.35f;//1.17f;
+	float b_c = 0.0001f;//1.15f;
+	float b_p = 0.0001f;//0.35f; //1.17f;
 	// float b_p = 0.0075f;
 
 	float F_m = 0.0f;
@@ -55,22 +55,23 @@ uint32 FSolver::Run()
 	float x_d_ref = 0.f;
 	float w_ref = 0.f;
 	float w_d_ref = 0.f;
-	float k_gains[4] = {-31.6227766, -51.12423315, 584.51134517, 110.81444504};
+	// float k_gains[4] = {-31.6227766, -51.12423315, 584.51134517, 110.81444504}; // 10kg
+	float k_gains[4] = {-31.6227766, -75.24925849, 863.38900959, 86.05398167};
 
 
-	float m_p = 10.f; //0.071f;
-	float m_c = 10.f; //0.288f;
-	float L_p = 0.6f; //(0.685f - 0.246f);
-	float I_p = 0.05f; //0.006f;
+	float m_p = 0.071f;
+	float m_c = 0.288f;
+	float L_p = (0.685f - 0.246f);
+	float I_p = 0.0000005f; //0.006f;
 	float g = 9.81f;
 	float u = 0;
 	bool SwingUp = true;
 	bool UseLQR = false;
 	float e_t = m_p * g * L_p;
 	float e_p = 0;
-	float e = 0.f;
+	float e = 0.35f;
 	float rail_ends = 0.415f;
-	
+
 	std::chrono::steady_clock::time_point StepStartTime;
 	std::chrono::steady_clock::time_point StepEndTime;
 	std::chrono::steady_clock::time_point Timer = std::chrono::steady_clock::now();
@@ -78,44 +79,29 @@ uint32 FSolver::Run()
 	{
 		StepStartTime = std::chrono::steady_clock::now();
 
-		//F_m = u;
-
-		// if (WorldPtr->GetWorld()->GetRealTimeSeconds() < 2.f)
-		// {
-		// 	F_m = 0.f;
-		// }
-		// else if(WorldPtr->GetWorld()->GetRealTimeSeconds() > 2.f &&  WorldPtr->GetWorld()->GetRealTimeSeconds() < 6.f)
-		// {
-		// 	F_m = 30.f;
-		// }
-		// else
-		// {
-		// 	F_m = 0.f;;
-		// }
-
+		F_m = u;
 
 		x_dd = (F_m - b_c * x_d + m_p * L_p * w_dd * cos(w) - m_p * L_p * w_d * w_d * sin(w)) / (m_p + m_c);
-		w_dd = (m_p * L_p * g * sin(w) + m_p * L_p * x_dd * cos(w) - b_p * w_d) / (I_p + m_p * L_p * L_p);
-		if (x >= rail_ends)
-		{
-			x_dd = -x_dd;
-			w_dd = -w_dd;
-			x_d = -(1 + e) * x_d;
-			x = rail_ends;
-		}
-		if (x <= -rail_ends)
-		{
-			x_dd = -x_dd;
-			w_dd = -w_dd;
-			x_d = -(1 + e) * x_d;
-			x = -rail_ends;
-		}
-		
 		x_d = x_dd * DeltaTime + x_d;
 		x = x_d * DeltaTime + x;
+
+		// if (x >= rail_ends)
+		// {
+		// 	x_dd = 0.f;
+		// 	x_d = -e * x_d;
+		// 	x = rail_ends;
+		// }
+		// if (x <= -rail_ends)
+		// {
+		// 	x_dd = 0.f;
+		// 	x_d = -e * x_d;
+		// 	x = -rail_ends;
+		// }
+
+		w_dd = (m_p * L_p * g * sin(w) + m_p * L_p * x_dd * cos(w) - b_p * w_d) / (I_p + m_p * L_p * L_p);
 		w_d = w_dd * DeltaTime + w_d;
 		w = w_d * DeltaTime + w;
-		
+
 
 		if (SwingUp)
 		{
@@ -124,7 +110,8 @@ uint32 FSolver::Run()
 			if (w > 1.571 || w < 4.712)
 			{
 				e_p = 0.5f * I_p * w_d * w_d + m_p * g * L_p * cos(w);
-				u = (e_t - e_p) * w_d * cos(w) * 0.18525;
+				u = (e_t - e_p) * w_d * cos(w) * 0.465f;//0.18525;
+				// u = (e_t - e_p) * w_d * cos(w) * 0.415f;//0.18525;
 			}
 			else if (e_t == e_p)
 			{
@@ -136,12 +123,22 @@ uint32 FSolver::Run()
 			}
 
 
-			// if (w < 0.0 + 0.15 || w > 3.1415 * 2 - 0.15)
-			// {
-			// 	SwingUp = false;
-			// 	UseLQR = true;
-			// }
+			if (w < 0.0 + 0.15 || w > 3.1415 * 2 - 0.15)
+			{
+				SwingUp = false;
+				UseLQR = true;
+				if (w > 3.1415*2 - 0.15)
+				{
+					w_ref = PI*2;
+				}
+			}
 		}
+		else
+		{
+			u = 0;
+		}
+
+
 		if (UseLQR)
 		{
 			// X = matrix([
@@ -159,9 +156,9 @@ uint32 FSolver::Run()
 			// u = -K*(X - ref);
 		}
 
-		if (u > 1000.f)
+		if (u > 100.f)
 		{
-			u = 1000.f;
+			u = 100.f;
 		}
 
 		UE4_Mutex.Lock();
@@ -192,12 +189,12 @@ uint32 FSolver::Run()
 
 float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position)
 {
-	float m_p = 10.f; //0.071f;
-	float m_c = 10.f; //0.288f;
-	float L_p = 0.6f; //(0.685f - 0.246f);
-	float I_p = 0.05f; //0.006f;
+	float m_p = 0.071f;
+	float m_c = 0.288f;
+	float L_p = (0.685f - 0.246f);
+	float I_p = 0.0000005f; //0.006f;
 	float g = 9.81f;
-	float b_p = 1.17;
+	float b_p = 0.00001;
 	float SetPoint;
 	float e_t = m_p * g * L_p;
 	//float e_p = 0.5f*(I_p+m_p*L_p*L_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
@@ -251,7 +248,7 @@ double FSolver::GetElapsedTime()
 	return Time;
 }
 
-float FSolver::SignOfFloat(float Value)
+float FSolver::SignOfFloat(const float Value)
 {
-	return (Value >= 0.0f) ? 1.0f : -1.0f;
+	return Value >= 0.0f ? 1.0f : -1.0f;
 }
