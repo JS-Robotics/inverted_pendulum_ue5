@@ -53,7 +53,7 @@ uint32 FSolver::Run()
 
 	float x_ref = 0.f;
 	float x_d_ref = 0.f;
-	float w_ref = 0.f;
+	float w_ref = PI * 0.0f;
 	float w_d_ref = 0.f;
 	// float k_gains[4] = {-31.6227766, -51.12423315, 584.51134517, 110.81444504}; // 10kg
 	float k_gains[4] = {-31.6227766, -75.24925849, 863.38900959, 86.05398167};
@@ -81,22 +81,36 @@ uint32 FSolver::Run()
 
 		F_m = u;
 
+		// if (WorldPtr->RealTimeSeconds < 1.f)
+		// {
+		// 	F_m = 0.25f;
+		// } else
+		// {
+		// 	F_m = 0.0f;
+		// }
+
+		if(F_m == 0.f)
+		{
+			F_m = -(m_c + m_p) * (x_d / 0.005f); // Stopping the cart Almost instantanious when motor is not active
+		}
+		
 		x_dd = (F_m - b_c * x_d + m_p * L_p * w_dd * cos(w) - m_p * L_p * w_d * w_d * sin(w)) / (m_p + m_c);
 		x_d = x_dd * DeltaTime + x_d;
 		x = x_d * DeltaTime + x;
 
-		// if (x >= rail_ends)
-		// {
-		// 	x_dd = 0.f;
-		// 	x_d = -e * x_d;
-		// 	x = rail_ends;
-		// }
-		// if (x <= -rail_ends)
-		// {
-		// 	x_dd = 0.f;
-		// 	x_d = -e * x_d;
-		// 	x = -rail_ends;
-		// }
+		// Collision handling -- START
+		if (x >= rail_ends)
+		{
+			x_dd = 0.f;
+			x_d = -e * x_d;
+			x = rail_ends;
+		}
+		if (x <= -rail_ends)
+		{
+			x_dd = 0.f;
+			x_d = -e * x_d;
+			x = -rail_ends;
+		} // Collision handling -- End
 
 		w_dd = (m_p * L_p * g * sin(w) + m_p * L_p * x_dd * cos(w) - b_p * w_d) / (I_p + m_p * L_p * L_p);
 		w_d = w_dd * DeltaTime + w_d;
@@ -105,24 +119,8 @@ uint32 FSolver::Run()
 
 		if (SwingUp)
 		{
-			//u = SwingUpControl(w, w_d, x);
-
-			if (w > 1.571 || w < 4.712)
-			{
-				e_p = 0.5f * I_p * w_d * w_d + m_p * g * L_p * cos(w);
-				u = (e_t - e_p) * w_d * cos(w) * 0.465f;//0.18525;
-				// u = (e_t - e_p) * w_d * cos(w) * 0.415f;//0.18525;
-			}
-			else if (e_t == e_p)
-			{
-				u = 0;
-			}
-			else
-			{
-				u = 0;
-			}
-
-
+			u = SwingUpControl(w, w_d, x);
+			
 			if (w < 0.0 + 0.15 || w > 3.1415 * 2 - 0.15)
 			{
 				SwingUp = false;
@@ -133,27 +131,14 @@ uint32 FSolver::Run()
 				}
 			}
 		}
-		else
-		{
-			u = 0;
-		}
-
 
 		if (UseLQR)
 		{
-			// X = matrix([
-			// 	[x],
-			// 	[dx],
-			// 	[a],
-			// 	[da]
-			// ])
-			float temp_x = x - x_ref;
-			float temp_xd = x_d - x_d_ref;
-			float temp_w = w - w_ref;
-			float temp_wd = w_d - w_d_ref;
-
+			const float temp_x = x - x_ref;
+			const float temp_xd = x_d - x_d_ref;
+			const float temp_w = w - w_ref;
+			const float temp_wd = w_d - w_d_ref;
 			u = -k_gains[0] * temp_x - k_gains[1] * temp_xd - k_gains[2] * temp_w - k_gains[3] * temp_wd;
-			// u = -K*(X - ref);
 		}
 
 		if (u > 100.f)
@@ -199,7 +184,7 @@ float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position)
 	float e_t = m_p * g * L_p;
 	//float e_p = 0.5f*(I_p+m_p*L_p*L_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
 	float e_p = m_p * g * L_p * cos(Theta);
-	float Direction = -75.0f * SignOfFloat(ThetaDot) * SignOfFloat(Theta);
+	float Direction = 5.0f * SignOfFloat(ThetaDot) * SignOfFloat(Theta);
 
 	if (Theta > PI)
 	{
@@ -221,7 +206,7 @@ float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position)
 	{
 		u = 0;
 	}
-	u = -0.1f * ThetaDot * Theta * (e_t - e_p);
+	// u = -0.1f * ThetaDot * Theta * (e_t - e_p);
 
 	return u;
 }
