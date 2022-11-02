@@ -20,7 +20,8 @@ public:
 	virtual void Stop();
 
 	bool IsRunning() const {return !bStopThread;}
-	void GetPose(float& Position, float& Rotation);
+	void GetPose(float& Position, float& Rotation, float& Force);
+	void GetSetPoint(float& SetPointRef);
 	double GetElapsedTime();
 
 protected:
@@ -30,8 +31,11 @@ protected:
 private:
 	UWorld* WorldPtr;
 	bool bStopThread;
+	float SetPoint;
+	float SetPointIn;
 	float CartPosition;
 	float PoleRotation;
+	float CartForce;
 	double ElapsedTime;
 	float ErrorIntegral;
 	float SwingUpControl(float Theta, float ThetaDot, float Position);

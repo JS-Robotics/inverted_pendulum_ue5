@@ -27,6 +27,8 @@ bool FSolver::Init()
 	bStopThread = false;
 	CartPosition = 0.0f;
 	PoleRotation = 0.0f;
+	SetPoint = 0.0f;
+	SetPointIn = SetPoint;
 	return true;
 }
 
@@ -45,7 +47,7 @@ uint32 FSolver::Run()
 	float w_d = 0.0f;
 	float w_dd = 0.0f;
 
-	float b_c = 0.0001f;//1.15f;
+	float b_c = 0.1f;//1.15f;
 	float b_p = 0.0001f;//0.35f; //1.17f;
 	// float b_p = 0.0075f;
 
@@ -89,10 +91,11 @@ uint32 FSolver::Run()
 		// 	F_m = 0.0f;
 		// }
 
-		if(F_m == 0.f)
-		{
-			F_m = -(m_c + m_p) * (x_d / 0.005f); // Stopping the cart Almost instantanious when motor is not active
-		}
+		
+		// if(F_m == 0.f)
+		// {
+		// 	F_m = -(m_c + m_p) * (x_d / 0.01f); // Stopping the cart Almost instantanious when motor is not active
+		// }
 		
 		x_dd = (F_m - b_c * x_d + m_p * L_p * w_dd * cos(w) - m_p * L_p * w_d * w_d * sin(w)) / (m_p + m_c);
 		x_d = x_dd * DeltaTime + x_d;
@@ -148,7 +151,11 @@ uint32 FSolver::Run()
 
 		UE4_Mutex.Lock();
 		CartPosition = x * 100.0f; // Converting from [m] to [cm]
-		PoleRotation = w * 180.0f / 3.14f + 180; // Converting from [rad] to [deg], and rotating to UE axis
+		// PoleRotation = w * 180.0f / 3.14f - 180.f; // Converting from [rad] to [deg], and rotating to UE axis
+		PoleRotation = w; // Converting from [rad] to [deg], and rotating to UE axis
+		// CartForce = F_m;
+		CartForce = u;
+		SetPointIn = SetPoint*100.0f; // Variable to make it thread safe
 		UE4_Mutex.Unlock();
 
 		StepEndTime = std::chrono::steady_clock::now();
@@ -180,34 +187,34 @@ float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position)
 	float I_p = 0.0000005f; //0.006f;
 	float g = 9.81f;
 	float b_p = 0.00001;
-	float SetPoint;
 	float e_t = m_p * g * L_p;
-	//float e_p = 0.5f*(I_p+m_p*L_p*L_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
+	// float e_p = 0.5f*(I_p+m_p)*L_p*L_p*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
 	float e_p = m_p * g * L_p * cos(Theta);
 	float Direction = 5.0f * SignOfFloat(ThetaDot) * SignOfFloat(Theta);
-
-	if (Theta > PI)
+	SetPoint = PI;
+	if (Theta > PI - .1f)
 	{
 		SetPoint = -0.3f;
 	}
-	if (Theta <= PI)
+	if (Theta <= PI + .1f)
 	{
 		SetPoint = 0.3f;
 	}
-
 	float Error = SetPoint - Position;
-	//float u = (e_t - e_p)*ThetaDot*cos(Theta)*0.195;
 	float u;
-	if (Theta > PI - 0.1 || Theta < PI + 0.1)
+	// if (Theta > PI - 0.01 || Theta < PI + 0.01)
+	if (Theta >= PI - 0.1 && Theta <= PI + 0.1)
 	{
+		// u = 10.f*Error;
+		// u = (e_t - e_p)*cos(Theta)*ThetaDot*1;
 		u = Error * Direction;
 	}
 	else
 	{
 		u = 0;
 	}
-	// u = -0.1f * ThetaDot * Theta * (e_t - e_p);
-
+	// u = (e_t - e_p)*cos(Theta)*ThetaDot*0.28;
+	// u = (e_t - e_p)*cos(Theta)*ThetaDot*1;
 	return u;
 }
 
@@ -217,13 +224,22 @@ void FSolver::Stop()
 	bStopThread = true;
 }
 
-void FSolver::GetPose(float& Position, float& Rotation)
+void FSolver::GetPose(float& Position, float& Rotation, float& Force)
 {
 	UE4_Mutex.Lock();
 	Position = MoveTemp(CartPosition);
 	Rotation = MoveTemp(PoleRotation);
+	Force = MoveTemp(CartForce);
 	UE4_Mutex.Unlock();
 }
+
+void FSolver::GetSetPoint(float& SetPointRef)
+{
+	UE4_Mutex.Lock();
+	SetPointRef = MoveTemp(SetPointIn);
+	UE4_Mutex.Unlock();
+};
+
 
 double FSolver::GetElapsedTime()
 {

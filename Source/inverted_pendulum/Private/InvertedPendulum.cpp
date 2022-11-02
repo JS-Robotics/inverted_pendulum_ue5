@@ -50,18 +50,29 @@ void AInvertedPendulum::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	float XPos = 0;
 	float ThetaPos = 0;
-
+	float CartForce = 0.f;
+	float SetPoint = 0.0f;
+	SolverThread->GetSetPoint(SetPoint);
 	if (SolverThread)
 	{
-		SolverThread->GetPose(XPos, ThetaPos);
+		SolverThread->GetPose(XPos, ThetaPos, CartForce);
 	}
+	
 	constexpr float CartOffsetY = 7.2269f;
 	constexpr float CartOffsetZ = 91.609f;
 	const FVector PosUpdate = {XPos, CartOffsetY, CartOffsetZ}; 
-	const FRotator AngleUpdate = {ThetaPos, 0.0f, 0.0f}; 
+	const FRotator AngleUpdate = {ThetaPos* 180.0f / 3.14f - 180.f, 0.0f, 0.0f}; 
 	CartStaticMesh->SetRelativeLocation(PosUpdate); // Reset back position on begin play
 	RevoluteJoint->SetRelativeRotation(AngleUpdate); // Reset back position on begin play
+	FVector p1 = FVector(XPos, CartOffsetY, CartOffsetZ); 
+	FVector p2 = FVector(XPos + CartForce*50.f, CartOffsetY, CartOffsetZ); 
+	DrawDebugLine(this->GetWorld(), p1, p2, FColor{255,0,0}, false, 0.0f, 0, 2.0f);
+	DrawDebugCircle(this->GetWorld(), {SetPoint, CartOffsetY, CartOffsetZ}, 10.f, 10, FColor{255,0,0}, false, 0.0f, 0, 2.0f);
+	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Yellow,
+									 FString::Printf(
+										 TEXT("Angle: %f"), ThetaPos));
 
+	
 	// UE_LOG(LogTemp, Warning, TEXT("Elapsed Simulation time: %f[s]"), SolverThread->GetElapsedTime());
 }
 
