@@ -70,7 +70,7 @@ void AInvertedPendulum::Tick(float DeltaTime)
 	DrawDebugCircle(this->GetWorld(), {SetPoint, CartOffsetY, CartOffsetZ}, 10.f, 10, FColor{255,0,0}, false, 0.0f, 0, 2.0f);
 	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Yellow,
 									 FString::Printf(
-										 TEXT("Angle: %f"), ThetaPos));
+										 TEXT("Angle: %f, Force: %f"), ThetaPos, CartForce));
 
 	
 	// UE_LOG(LogTemp, Warning, TEXT("Elapsed Simulation time: %f[s]"), SolverThread->GetElapsedTime());

@@ -43,12 +43,13 @@ uint32 FSolver::Run()
 	float x_d = 0.0f;
 	float x_dd = 0.0f;
 
-	float w = 3.0f; //3.1415f;
+	
+	float w = PI; //2.0f; //3.1415f;
 	float w_d = 0.0f;
 	float w_dd = 0.0f;
 
-	float b_c = 0.1f;//1.15f;
-	float b_p = 0.0001f;//0.35f; //1.17f;
+	float b_c = 0.1f; //1.15f;
+	float b_p = 0.0001f; //0.35f; //1.17f;
 	// float b_p = 0.0075f;
 
 	float F_m = 0.0f;
@@ -91,12 +92,12 @@ uint32 FSolver::Run()
 		// 	F_m = 0.0f;
 		// }
 
-		
+
 		// if(F_m == 0.f)
 		// {
 		// 	F_m = -(m_c + m_p) * (x_d / 0.01f); // Stopping the cart Almost instantanious when motor is not active
 		// }
-		
+
 		x_dd = (F_m - b_c * x_d + m_p * L_p * w_dd * cos(w) - m_p * L_p * w_d * w_d * sin(w)) / (m_p + m_c);
 		x_d = x_dd * DeltaTime + x_d;
 		x = x_d * DeltaTime + x;
@@ -123,14 +124,14 @@ uint32 FSolver::Run()
 		if (SwingUp)
 		{
 			u = SwingUpControl(w, w_d, x);
-			
+
 			if (w < 0.0 + 0.15 || w > 3.1415 * 2 - 0.15)
 			{
 				SwingUp = false;
 				UseLQR = true;
-				if (w > 3.1415*2 - 0.15)
+				if (w > 3.1415 * 2 - 0.15)
 				{
-					w_ref = PI*2;
+					w_ref = PI * 2;
 				}
 			}
 		}
@@ -155,7 +156,7 @@ uint32 FSolver::Run()
 		PoleRotation = w; // Converting from [rad] to [deg], and rotating to UE axis
 		// CartForce = F_m;
 		CartForce = u;
-		SetPointIn = SetPoint*100.0f; // Variable to make it thread safe
+		SetPointIn = SetPoint * 100.0f; // Variable to make it thread safe
 		UE4_Mutex.Unlock();
 
 		StepEndTime = std::chrono::steady_clock::now();
@@ -181,6 +182,7 @@ uint32 FSolver::Run()
 
 float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position)
 {
+	float Direction = -1.0f * SignOfFloat(ThetaDot) * SignOfFloat(cos(Theta));
 	float m_p = 0.071f;
 	float m_c = 0.288f;
 	float L_p = (0.685f - 0.246f);
@@ -188,33 +190,34 @@ float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position)
 	float g = 9.81f;
 	float b_p = 0.00001;
 	float e_t = m_p * g * L_p;
-	// float e_p = 0.5f*(I_p+m_p)*L_p*L_p*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
+	//float e_p = 0.5f*(I_p+m_p*L_p*L_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
 	float e_p = m_p * g * L_p * cos(Theta);
-	float Direction = 5.0f * SignOfFloat(ThetaDot) * SignOfFloat(Theta);
-	SetPoint = PI;
-	if (Theta > PI - .1f)
-	{
-		SetPoint = -0.3f;
-	}
-	if (Theta <= PI + .1f)
+	if (Theta < PI+0.5f && ThetaDot < 0.f)
 	{
 		SetPoint = 0.3f;
 	}
+	else if (Theta >= PI-0.5f && ThetaDot >= 0.f)
+	{
+		SetPoint = -0.3f;
+	}
+	else
+	{
+		SetPoint = Position;
+	}
+	
+	
 	float Error = SetPoint - Position;
 	float u;
-	// if (Theta > PI - 0.01 || Theta < PI + 0.01)
-	if (Theta >= PI - 0.1 && Theta <= PI + 0.1)
+	
+	if (Theta >= PI - 1.5f && Theta < PI + 1.5f)
 	{
-		// u = 10.f*Error;
-		// u = (e_t - e_p)*cos(Theta)*ThetaDot*1;
-		u = Error * Direction;
+		// u = 1.5f*Error*(e_t - e_p);
+		u = 3.5f*Error*(e_t - e_p);
 	}
 	else
 	{
 		u = 0;
 	}
-	// u = (e_t - e_p)*cos(Theta)*ThetaDot*0.28;
-	// u = (e_t - e_p)*cos(Theta)*ThetaDot*1;
 	return u;
 }
 
