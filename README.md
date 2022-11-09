@@ -8,5 +8,5 @@ Swing up papers:
 #### Note: gif takes some time to load ####
 
 <p align="center">
-    <img src="misc/images/pendulum_gif.gif"/>
+    <img src="misc/images/PendulumSwingUpV2.gif"/>
 </p>
