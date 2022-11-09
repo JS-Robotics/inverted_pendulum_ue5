@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "HAL/Runnable.h"
+#include "SystemParameters.h"
 #include <chrono>
 /**
  * 
@@ -29,6 +30,7 @@ protected:
 	FRunnableThread* Thread = nullptr;
 
 private:
+	MechanicalParamerters SysParameters; 
 	UWorld* WorldPtr;
 	bool bStopThread;
 	float SetPoint;
@@ -38,6 +40,6 @@ private:
 	float CartForce;
 	double ElapsedTime;
 	float ErrorIntegral;
-	float SwingUpControl(float Theta, float ThetaDot, float Position);
+	float SwingUpControl(float Theta, float ThetaDot, float Position, float Velocity);
 	float SignOfFloat(float Value);
 };

@@ -43,7 +43,7 @@ uint32 FSolver::Run()
 	float x_d = 0.0f;
 	float x_dd = 0.0f;
 
-	
+
 	float w = PI; //2.0f; //3.1415f;
 	float w_d = 0.0f;
 	float w_dd = 0.0f;
@@ -70,32 +70,22 @@ uint32 FSolver::Run()
 	float u = 0;
 	bool SwingUp = true;
 	bool UseLQR = false;
-	float e_t = m_p * g * L_p;
-	float e_p = 0;
 	float e = 0.35f;
 	float rail_ends = 0.415f;
 
 	std::chrono::steady_clock::time_point StepStartTime;
 	std::chrono::steady_clock::time_point StepEndTime;
 	std::chrono::steady_clock::time_point Timer = std::chrono::steady_clock::now();
+	
 	while (!bStopThread)
 	{
 		StepStartTime = std::chrono::steady_clock::now();
 
 		F_m = u;
 
-		// if (WorldPtr->RealTimeSeconds < 1.f)
+		// if(F_m == 0.f)  //TODO Figure out how to model the holding of a stopped motor.
 		// {
-		// 	F_m = 0.25f;
-		// } else
-		// {
-		// 	F_m = 0.0f;
-		// }
-
-
-		// if(F_m == 0.f)
-		// {
-		// 	F_m = -(m_c + m_p) * (x_d / 0.01f); // Stopping the cart Almost instantanious when motor is not active
+		// 	F_m = -(m_c + m_p) * (x_d / 0.1f); // Stopping the cart Almost instantanious when motor is not active
 		// }
 
 		x_dd = (F_m - b_c * x_d + m_p * L_p * w_dd * cos(w) - m_p * L_p * w_d * w_d * sin(w)) / (m_p + m_c);
@@ -120,10 +110,9 @@ uint32 FSolver::Run()
 		w_d = w_dd * DeltaTime + w_d;
 		w = w_d * DeltaTime + w;
 
-
 		if (SwingUp)
 		{
-			u = SwingUpControl(w, w_d, x);
+			u = SwingUpControl(w, w_d, x, x_d);
 
 			if (w < 0.0 + 0.15 || w > 3.1415 * 2 - 0.15)
 			{
@@ -154,8 +143,7 @@ uint32 FSolver::Run()
 		CartPosition = x * 100.0f; // Converting from [m] to [cm]
 		// PoleRotation = w * 180.0f / 3.14f - 180.f; // Converting from [rad] to [deg], and rotating to UE axis
 		PoleRotation = w; // Converting from [rad] to [deg], and rotating to UE axis
-		// CartForce = F_m;
-		CartForce = u;
+		CartForce = F_m;
 		SetPointIn = SetPoint * 100.0f; // Variable to make it thread safe
 		UE4_Mutex.Unlock();
 
@@ -164,39 +152,33 @@ uint32 FSolver::Run()
 
 		if (StepTime < DeltaTime)
 		{
-			// UE_LOG(LogTemp, Warning, TEXT("StepTime %f[s], sleeping for %f[s]"), StepTime, DeltaTime-StepTime);
-			// std::this_thread::sleep_for(std::chrono::duration<double>(DeltaTime - StepTime));
-			//FPlatformProcess::Sleep(DeltaTime - StepTime); Sleep all threads
 			std::this_thread::sleep_for(std::chrono::duration<double>(DeltaTime - StepTime));
 		}
-		else
-		{
-			// UE_LOG(LogTemp, Warning, TEXT("Step period was larger than dt. Time overflow: %f[s]"), StepTime);
-		}
-		//UE_LOG(LogTemp, Warning, TEXT("Period with wait: %f[s]"), std::chrono::duration<float>(std::chrono::steady_clock::now() - StepStartTime).count());
+
 		ElapsedTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - Timer).count();
 	}
 	return 0;
 }
 
 
-float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position)
+float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position, float Velocity)
 {
-	float Direction = -1.0f * SignOfFloat(ThetaDot) * SignOfFloat(cos(Theta));
 	float m_p = 0.071f;
 	float m_c = 0.288f;
 	float L_p = (0.685f - 0.246f);
 	float I_p = 0.0000005f; //0.006f;
 	float g = 9.81f;
 	float b_p = 0.00001;
+	float b_c = 0.1f;
 	float e_t = m_p * g * L_p;
-	//float e_p = 0.5f*(I_p+m_p*L_p*L_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
-	float e_p = m_p * g * L_p * cos(Theta);
-	if (Theta < PI+0.5f && ThetaDot < 0.f)
+	float e_p = 0.5f*(I_p+m_p*L_p*L_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
+	// float e_p = m_p * g * L_p * cos(Theta);
+	
+	if (Theta < PI + 0.5f && ThetaDot < 0.f)
 	{
 		SetPoint = 0.3f;
 	}
-	else if (Theta >= PI-0.5f && ThetaDot >= 0.f)
+	else if (Theta >= PI - 0.5f && ThetaDot >= 0.f)
 	{
 		SetPoint = -0.3f;
 	}
@@ -204,15 +186,14 @@ float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position)
 	{
 		SetPoint = Position;
 	}
-	
-	
+
 	float Error = SetPoint - Position;
 	float u;
-	
+
 	if (Theta >= PI - 1.5f && Theta < PI + 1.5f)
 	{
-		// u = 1.5f*Error*(e_t - e_p);
-		u = 3.5f*Error*(e_t - e_p);
+		u = 2.0f*Error*(e_t - e_p) + b_p*ThetaDot;
+		// u = 2.f * Error;
 	}
 	else
 	{
@@ -220,7 +201,6 @@ float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position)
 	}
 	return u;
 }
-
 
 void FSolver::Stop()
 {
