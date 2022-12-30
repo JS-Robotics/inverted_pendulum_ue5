@@ -171,7 +171,8 @@ float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position, float
 	float b_p = 0.00001;
 	float b_c = 0.1f;
 	float e_t = m_p * g * L_p;
-	float e_p = 0.5f*(I_p+m_p*L_p*L_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);
+	//float e_p = 0.5f*(I_p+m_p*L_p*L_p)*ThetaDot*ThetaDot + m_p*g*L_p*cos(Theta);  // Still something fishy about this one.
+	float e_p = m_p*g*L_p*cos(Theta);
 	// float e_p = m_p * g * L_p * cos(Theta);
 	
 	if (Theta < PI + 0.5f && ThetaDot < 0.f)
@@ -192,7 +193,7 @@ float FSolver::SwingUpControl(float Theta, float ThetaDot, float Position, float
 
 	if (Theta >= PI - 1.5f && Theta < PI + 1.5f)
 	{
-		u = 2.0f*Error*(e_t - e_p) + b_p*ThetaDot;
+		u = 2.5f*Error*(e_t - e_p) + b_p*ThetaDot;
 		// u = 2.f * Error;
 	}
 	else
