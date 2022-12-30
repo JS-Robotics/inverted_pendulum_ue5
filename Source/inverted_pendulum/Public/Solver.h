@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "HAL/Runnable.h"
-#include "SystemParameters.h"
+//#include "SystemParameters.h"
 #include <chrono>
 /**
  * 
@@ -30,7 +30,7 @@ protected:
 	FRunnableThread* Thread = nullptr;
 
 private:
-	MechanicalParamerters SysParameters; 
+	//MechanicalParamerters SysParameters; 
 	UWorld* WorldPtr;
 	bool bStopThread;
 	float SetPoint;
